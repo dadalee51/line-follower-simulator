@@ -2,6 +2,7 @@ import numpy as np
 import pygame
 import os
 import pygame.gfxdraw
+import json
 
 class MapEditor:
     def __init__(self, screen_dimensions, background_color=(255, 255, 255)):
@@ -17,11 +18,23 @@ class MapEditor:
     def save(self, filename):
         pygame.image.save(self.surface, filename)
 
+    def load(self, filename):
+        if os.path.exists(filename):
+            loaded_surface = pygame.image.load(filename)
+            self.surface.blit(loaded_surface, (0, 0))
+
     def run(self):
         screen = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption("Map Editor")
         clock = pygame.time.Clock()
         drawing = False
+
+        font = pygame.font.SysFont("Arial", 20)
+        save_button = pygame.Rect(10, 10, 100, 30)
+        load_button = pygame.Rect(120, 10, 100, 30)
+        new_button = pygame.Rect(230, 10, 100, 30)
+        run_button = pygame.Rect(340, 10, 100, 30)
+        quit_button = pygame.Rect(450, 10, 100, 30)
 
         while True:
             for event in pygame.event.get():
@@ -29,8 +42,21 @@ class MapEditor:
                     return
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:  # Left mouse button
-                        drawing = True
-                        self.draw(event.pos)
+                        if save_button.collidepoint(event.pos):
+                            self.save("images/custom_map.png")
+                        elif load_button.collidepoint(event.pos):
+                            self.load("images/custom_map.png")
+                        elif new_button.collidepoint(event.pos):
+                            self.surface.fill((255, 255, 255))
+                        elif run_button.collidepoint(event.pos):
+                            self.save("images/custom_map.png")
+                            return
+                        elif quit_button.collidepoint(event.pos):
+                            pygame.quit()
+                            return "QUIT"
+                        else:
+                            drawing = True
+                            self.draw(event.pos)
                 elif event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 1:  # Left mouse button
                         drawing = False
@@ -47,6 +73,25 @@ class MapEditor:
                         self.brush_size = max(1, self.brush_size - 1)
 
             screen.blit(self.surface, (0, 0))
+
+            pygame.draw.rect(screen, (200, 200, 200), save_button)
+            pygame.draw.rect(screen, (200, 200, 200), load_button)
+            pygame.draw.rect(screen, (200, 200, 200), new_button)
+            pygame.draw.rect(screen, (200, 200, 200), run_button)
+            pygame.draw.rect(screen, (200, 200, 200), quit_button)
+
+            save_text = font.render("Save", True, (0, 0, 0))
+            load_text = font.render("Load", True, (0, 0, 0))
+            new_text = font.render("New", True, (0, 0, 0))
+            run_text = font.render("Run", True, (0, 0, 0))
+            quit_text = font.render("Quit", True, (0, 0, 0))
+
+            screen.blit(save_text, (save_button.x + 30, save_button.y + 5))
+            screen.blit(load_text, (load_button.x + 30, load_button.y + 5))
+            screen.blit(new_text, (new_button.x + 30, new_button.y + 5))
+            screen.blit(run_text, (run_button.x + 30, run_button.y + 5))
+            screen.blit(quit_text, (quit_button.x + 30, quit_button.y + 5))
+
             pygame.display.flip()
             clock.tick(60)
 
@@ -388,42 +433,61 @@ def is_darker(color1, color2):
     
     return gray1 < gray2
 
+def save_settings(settings, filename='settings.json'):
+    with open(filename, 'w') as f:
+        json.dump(settings, f)
+
+def load_settings(filename='settings.json'):
+    if os.path.exists(filename):
+        with open(filename, 'r') as f:
+            return json.load(f)
+    return None
+
 def main():
-    # Define all the values here instead of reading from setup.txt
-    ROBOT_WIDTH = 0.1
-    INITIAL_MOTOR_SPEED = 10000
-    MAX_MOTOR_SPEED = 20000
-    WHEEL_RADIUS = 0.04
-    SENSORS_NUMBER = 5
-    SENSOR_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255),
-                    (255, 255, 0), (0, 255, 255), (255, 0, 255),
-                    (255, 255, 255), (128, 0, 0), (0, 128, 0),
-                    (0, 0, 128)]
+    # Load settings from previous run if available
+    settings = load_settings()
+    if settings is None:
+        # Define default values if no settings are found
+        settings = {
+            "ROBOT_WIDTH": 0.1,
+            "INITIAL_MOTOR_SPEED": 10000,
+            "MAX_MOTOR_SPEED": 20000,
+            "WHEEL_RADIUS": 0.04,
+            "SENSORS_NUMBER": 5,
+            "SENSOR_COLORS": [(255, 0, 0), (0, 255, 0), (0, 0, 255),
+                              (255, 255, 0), (0, 255, 255), (255, 0, 255),
+                              (255, 255, 255), (128, 0, 0), (0, 128, 0),
+                              (0, 0, 128)]
+        }
 
     pygame.init()
     infoObject = pygame.display.Info()
     MAP_DIMENSIONS = (infoObject.current_w - 30, infoObject.current_h - 100)
-#    gfx = Graphics(MAP_DIMENSIONS, 'images/robot.png', 'images/map.png')
+
     # Create and run the map editor
     map_editor = MapEditor(MAP_DIMENSIONS)
-    map_editor.run()
+    result = map_editor.run()
+    if result == "QUIT":
+        pygame.quit()
+        return
 
     # Initialize Graphics with the custom map
     gfx = Graphics(MAP_DIMENSIONS, 'images/robot.png', 'images/custom_map.png')
 
     ROBOT_START, closed = gfx.robot_positioning()
 
-    SENSORS_POSITIONS, closed = gfx.sensors_positioning(SENSORS_NUMBER, ROBOT_START, closed)
+    SENSORS_POSITIONS, closed = gfx.sensors_positioning(settings["SENSORS_NUMBER"], ROBOT_START, closed)
 
     if closed:
         print("\033[91m {}\033[00m" .format("\nThe setup was not completed! Exiting...\n"))
+        pygame.quit()
         return
 
     robot = Robot(initial_position=ROBOT_START,
-                  width=ROBOT_WIDTH,
-                  initial_motor_speed=INITIAL_MOTOR_SPEED,
-                  max_motor_speed=MAX_MOTOR_SPEED,
-                  wheel_radius=WHEEL_RADIUS)
+                  width=settings["ROBOT_WIDTH"],
+                  initial_motor_speed=settings["INITIAL_MOTOR_SPEED"],
+                  max_motor_speed=settings["MAX_MOTOR_SPEED"],
+                  wheel_radius=settings["WHEEL_RADIUS"])
 
     for position in SENSORS_POSITIONS:
         robot.add_sensor(position, ROBOT_START)
@@ -434,22 +498,55 @@ def main():
 
     running = True
 
+    # Create buttons for load, save, new, and update
+    font = pygame.font.SysFont("Arial", 20)
+    load_button = pygame.Rect(10, 10, 100, 30)
+    save_button = pygame.Rect(120, 10, 100, 30)
+    new_button = pygame.Rect(230, 10, 100, 30)
+    update_button = pygame.Rect(340, 10, 100, 30)
+    quit_button = pygame.Rect(450, 10, 100, 30)
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # Left mouse button
+                    if load_button.collidepoint(event.pos):
+                        loaded_settings = load_settings()
+                        if loaded_settings:
+                            settings.update(loaded_settings)
+                    elif save_button.collidepoint(event.pos):
+                        save_settings(settings)
+                    elif new_button.collidepoint(event.pos):
+                        settings = {
+                            "ROBOT_WIDTH": 0.1,
+                            "INITIAL_MOTOR_SPEED": 10000,
+                            "MAX_MOTOR_SPEED": 20000,
+                            "WHEEL_RADIUS": 0.04,
+                            "SENSORS_NUMBER": 5,
+                            "SENSOR_COLORS": [(255, 0, 0), (0, 255, 0), (0, 0, 255),
+                                              (255, 255, 0), (0, 255, 255), (255, 0, 255),
+                                              (255, 255, 255), (128, 0, 0), (0, 128, 0),
+                                              (0, 0, 128)]
+                        }
+                    elif update_button.collidepoint(event.pos):
+                        # Here you can add code to update settings based on user input
+                        pass
+                    elif quit_button.collidepoint(event.pos):
+                        running = False
         
         gfx.map.blit(gfx.map_image, (0, 0))
         
         gfx.draw_robot(robot.x, robot.y, robot.heading)
         
         for sensor in robot.sensors:
-            gfx.draw_sensor(sensor, color=SENSOR_COLORS[robot.sensors.index(sensor)])
+            gfx.draw_sensor(sensor, color=settings["SENSOR_COLORS"][robot.sensors.index(sensor)])
         
         for idx in range(len(robot.sensors)):
             robot.sensors[idx].read_data(gfx.map_image)
         
-        gfx.show_sensors_data(robot.sensors, sensor_colors=SENSOR_COLORS[:SENSORS_NUMBER])
+        gfx.show_sensors_data(robot.sensors, sensor_colors=settings["SENSOR_COLORS"][:settings["SENSORS_NUMBER"]])
 
         current_time = pygame.time.get_ticks()
         dt = (current_time - last_time)/1000
@@ -478,10 +575,56 @@ def main():
             gfx.show_important_message("The robot went off the map!")
             
             pygame.display.update()
-            pygame.time.wait(3500)
-            running = False
+            pygame.time.wait(1000)  # Wait for 1 second
+            
+            # Create restart and quit buttons
+            restart_button = pygame.Rect(gfx.map.get_width() // 2 - 110, gfx.map.get_height() // 2 + 50, 100, 40)
+            quit_button = pygame.Rect(gfx.map.get_width() // 2 + 10, gfx.map.get_height() // 2 + 50, 100, 40)
+            
+            while True:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        return
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        if event.button == 1:
+                            if restart_button.collidepoint(event.pos):
+                                return main()  # Restart the simulation
+                            elif quit_button.collidepoint(event.pos):
+                                pygame.quit()
+                                return  # Quit the program
+                
+                # Draw buttons
+                pygame.draw.rect(gfx.map, (0, 255, 0), restart_button)
+                pygame.draw.rect(gfx.map, (255, 0, 0), quit_button)
+                
+                restart_text = font.render("Restart", True, (0, 0, 0))
+                quit_text = font.render("Quit", True, (0, 0, 0))
+                
+                gfx.map.blit(restart_text, (restart_button.x + 20, restart_button.y + 10))
+                gfx.map.blit(quit_text, (quit_button.x + 30, quit_button.y + 10))
+                
+                pygame.display.update()
             
         if running:
+            # Draw buttons
+            pygame.draw.rect(gfx.map, (200, 200, 200), load_button)
+            pygame.draw.rect(gfx.map, (200, 200, 200), save_button)
+            pygame.draw.rect(gfx.map, (200, 200, 200), new_button)
+            pygame.draw.rect(gfx.map, (200, 200, 200), update_button)
+            pygame.draw.rect(gfx.map, (200, 200, 200), quit_button)
+
+            load_text = font.render("Load", True, (0, 0, 0))
+            save_text = font.render("Save", True, (0, 0, 0))
+            new_text = font.render("New", True, (0, 0, 0))
+            update_text = font.render("Update", True, (0, 0, 0))
+            quit_text = font.render("Quit", True, (0, 0, 0))
+
+            gfx.map.blit(load_text, (load_button.x + 30, load_button.y + 5))
+            gfx.map.blit(save_text, (save_button.x + 30, save_button.y + 5))
+            gfx.map.blit(new_text, (new_button.x + 30, new_button.y + 5))
+            gfx.map.blit(update_text, (update_button.x + 20, update_button.y + 5))
+
             pygame.display.update()
 
     pygame.quit()
