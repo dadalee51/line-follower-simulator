@@ -1,7 +1,10 @@
 import numpy as np
 import pygame
 import os
-#update
+'''
+This code originally from https://github.com/yanvgf/line-follower-simulator
+Merged all python code as single file.
+'''
 # +===========================================================================+
 # |                     Robot class (and related classes)                     |
 # +===========================================================================+
