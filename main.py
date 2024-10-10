@@ -1,6 +1,54 @@
 import numpy as np
 import pygame
 import os
+import pygame.gfxdraw
+
+class MapEditor:
+    def __init__(self, screen_dimensions, background_color=(255, 255, 255)):
+        self.width, self.height = screen_dimensions
+        self.surface = pygame.Surface(screen_dimensions)
+        self.surface.fill(background_color)
+        self.draw_color = (0, 0, 0)
+        self.brush_size = 5
+
+    def draw(self, pos):
+        pygame.draw.circle(self.surface, self.draw_color, pos, self.brush_size)
+
+    def save(self, filename):
+        pygame.image.save(self.surface, filename)
+
+    def run(self):
+        screen = pygame.display.set_mode((self.width, self.height))
+        pygame.display.set_caption("Map Editor")
+        clock = pygame.time.Clock()
+        drawing = False
+
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:  # Left mouse button
+                        drawing = True
+                        self.draw(event.pos)
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    if event.button == 1:  # Left mouse button
+                        drawing = False
+                elif event.type == pygame.MOUSEMOTION:
+                    if drawing:
+                        self.draw(event.pos)
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_s:
+                        self.save("images/custom_map.png")
+                        return
+                    elif event.key == pygame.K_UP:
+                        self.brush_size = min(50, self.brush_size + 1)
+                    elif event.key == pygame.K_DOWN:
+                        self.brush_size = max(1, self.brush_size - 1)
+
+            screen.blit(self.surface, (0, 0))
+            pygame.display.flip()
+            clock.tick(60)
 
 class Motor:
     def __init__(self, max_motor_speed, wheel_radius):
@@ -355,7 +403,13 @@ def main():
     pygame.init()
     infoObject = pygame.display.Info()
     MAP_DIMENSIONS = (infoObject.current_w - 30, infoObject.current_h - 100)
-    gfx = Graphics(MAP_DIMENSIONS, 'images/robot.png', 'images/map.png')
+#    gfx = Graphics(MAP_DIMENSIONS, 'images/robot.png', 'images/map.png')
+    # Create and run the map editor
+    map_editor = MapEditor(MAP_DIMENSIONS)
+    map_editor.run()
+
+    # Initialize Graphics with the custom map
+    gfx = Graphics(MAP_DIMENSIONS, 'images/robot.png', 'images/custom_map.png')
 
     ROBOT_START, closed = gfx.robot_positioning()
 
