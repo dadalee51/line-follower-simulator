@@ -11,6 +11,7 @@ class MapEditor:
         self.surface.fill(background_color)
         self.draw_color = (0, 0, 0)
         self.brush_size = 5
+        self.load("images/custom_map.png")  # Automatically load map on start
 
     def draw(self, pos):
         pygame.draw.circle(self.surface, self.draw_color, pos, self.brush_size)
