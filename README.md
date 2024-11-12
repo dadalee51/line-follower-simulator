@@ -20,5 +20,9 @@
 
 5. The simulation ends if the robot goes off the map or if the user closes the window.
 
-This project seems to be a comprehensive simulation of a line-following robot, providing a visual interface for setup and real-time feedback during operation. It could be useful for testing line-following algorithms or demonstrating robotics concepts.
+This project is a comprehensive simulation of a line-following robot, providing a visual interface for setup and real-time feedback during operation. It could be useful for testing line-following algorithms or demonstrating robotics concepts.
+
+Original Project was forked from here:
+
+https://github.com/yanvgf/line-follower-simulator
 
